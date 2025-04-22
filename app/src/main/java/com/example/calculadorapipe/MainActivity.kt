@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +29,42 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CalculadoraSencilla() {
+    var input by remember { mutableStateOf("") }
+
+    fun calcularResultado(): String {
+        return try {
+            val tokens = StringTokenizer(input, "+-*/", true)
+            val valores = mutableListOf<Double>()
+            val operadores = mutableListOf<String>()
+
+            while (tokens.hasMoreTokens()) {
+                val token = tokens.nextToken().trim()
+                if (token.isEmpty()) continue
+                when (token) {
+                    "+", "-", "*", "/" -> operadores.add(token)
+                    else -> valores.add(token.toDoubleOrNull() ?: return "Error")
+                }
+            }
+
+            var resultado = valores[0]
+            for (i in operadores.indices) {
+                val op = operadores[i]
+                val num = valores.getOrNull(i + 1) ?: return "Error"
+                resultado = when (op) {
+                    "+" -> resultado + num
+                    "-" -> resultado - num
+                    "*" -> resultado * num
+                    "/" -> if (num != 0.0) resultado / num else return "Error"
+                    else -> return "Error"
+                }
+            }
+
+            resultado.toString()
+        } catch (e: Exception) {
+            "Error"
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -37,7 +74,7 @@ fun CalculadoraSencilla() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "0",
+            text = input.ifBlank { "0" },
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
@@ -60,7 +97,14 @@ fun CalculadoraSencilla() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     row.forEach { text ->
-                        BotonSencillo(text, Modifier.weight(1f))
+                        BotonSencillo(text, Modifier.weight(1f)) {
+                            when (text) {
+                                "C" -> input = ""
+                                "DEL" -> if (input.isNotEmpty()) input = input.dropLast(1)
+                                "=" -> input = calcularResultado()
+                                else -> input += text
+                            }
+                        }
                     }
                 }
             }
@@ -69,9 +113,9 @@ fun CalculadoraSencilla() {
 }
 
 @Composable
-fun BotonSencillo(text: String, modifier: Modifier) {
+fun BotonSencillo(text: String, modifier: Modifier, onClick: () -> Unit) {
     Button(
-        onClick = {},
+        onClick = onClick,
         modifier = modifier.height(64.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color.White)
     ) {
